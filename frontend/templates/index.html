@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <div>
+                <p class="eyebrow">Public AI Assistant Platform</p>
+                <h1>{{ app_name }}</h1>
+                <p class="lede">Local-first assistant with auth, safe automation, command learning, and Supabase-ready history logging.</p>
+            </div>
+            <div class="status-card">
+                <h2>System Status</h2>
+                <div id="statusGrid" class="status-grid"></div>
+            </div>
+        </section>
+
+        <section class="grid">
+            <div class="panel">
+                <h2>Authentication</h2>
+                <label>Email</label>
+                <input id="email" type="email" placeholder="you@example.com">
+                <label>Password</label>
+                <input id="password" type="password" placeholder="At least 8 characters">
+                <div class="button-row">
+                    <button id="signupBtn">Sign Up</button>
+                    <button id="loginBtn" class="secondary">Login</button>
+                    <button id="logoutBtn" class="ghost">Logout</button>
+                </div>
+                <p id="authMessage" class="message"></p>
+            </div>
+
+            <div class="panel">
+                <h2>Voice Training</h2>
+                <label>Sample Reference</label>
+                <input id="voiceSample" type="text" placeholder="example: desktop-mic-sample-1">
+                <button id="trainVoiceBtn">Train Voice</button>
+                <p class="hint">Starter scaffold mode stores a local profile placeholder so the end-to-end UX is ready for the real voice pipeline.</p>
+                <p id="voiceMessage" class="message"></p>
+            </div>
+        </section>
+
+        <section class="grid">
+            <div class="panel">
+                <h2>Chat</h2>
+                <div id="chatLog" class="chat-log"></div>
+                <textarea id="chatInput" rows="4" placeholder="Try: When I say open my setup - open Android Studio, Claude Code, YouTube and ChatGPT"></textarea>
+                <div class="button-row">
+                    <button id="sendBtn">Send</button>
+                    <button id="confirmBtn" class="secondary">Send With Confirmation</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Command Trainer</h2>
+                <label>Natural Language Command</label>
+                <textarea id="commandInput" rows="5" placeholder="When I say open my setup - open Android Studio, Claude Code, YouTube and ChatGPT"></textarea>
+                <button id="saveCommandBtn">Save Command</button>
+                <div class="history-box">
+                    <h3>Saved Commands</h3>
+                    <ul id="commandList"></ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid">
+            <div class="panel">
+                <h2>Conversation History</h2>
+                <button id="refreshHistoryBtn" class="secondary">Refresh History</button>
+                <ul id="conversationHistory" class="history-list"></ul>
+            </div>
+
+            <div class="panel">
+                <h2>Action History</h2>
+                <ul id="actionHistory" class="history-list"></ul>
+            </div>
+        </section>
+    </main>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+

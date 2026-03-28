@@ -1,0 +1,19 @@
+{
+  "app_name": "Vijay",
+  "host": "127.0.0.1",
+  "port": 8000,
+  "dry_run": true,
+  "allowed_origins": [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000"
+  ],
+  "allowed_app_aliases": {
+    "android studio": "C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe",
+    "claude code": "claude",
+    "vs code": "code",
+    "chatgpt": "https://chatgpt.com",
+    "youtube": "https://www.youtube.com"
+  },
+  "search_engine": "https://www.google.com/search?q={query}"
+}
+
