@@ -5,6 +5,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class GoogleAuthRequest(BaseModel):
+    credential: str = Field(min_length=10, max_length=6000)
+
+
 class AuthRequest(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     password: str = Field(min_length=8, max_length=128)
@@ -25,6 +29,19 @@ class VoiceTrainRequest(BaseModel):
 
 class VoiceVerifyRequest(BaseModel):
     sample_reference: str | None = Field(default=None, max_length=500)
+
+
+class PromptUpdateRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=4000)
+
+
+class DevicePermissionRequest(BaseModel):
+    enabled: bool
+
+
+class AdminUserUpdateRequest(BaseModel):
+    prompt: str | None = Field(default=None, min_length=1, max_length=4000)
+    device_access_enabled: bool | None = None
 
 
 class ApiMessage(BaseModel):

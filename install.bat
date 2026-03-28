@@ -21,9 +21,8 @@ if not exist ".env" (
 )
 
 echo.
-echo Vijay is starting on http://127.0.0.1:8000
-echo Add your Supabase keys in .env to enable cloud auth and logging.
+echo Vijay is starting.
+echo Add Google, Groq, and Supabase keys in .env for the full experience.
 echo.
 
 python main.py
-

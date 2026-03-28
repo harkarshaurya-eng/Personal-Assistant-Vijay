@@ -3,8 +3,8 @@ __pycache__/
 *.pyc
 .env
 data/local_store.json
+data/user_store.json
 data/vijay.log
 dist/
 build/
 *.spec
-

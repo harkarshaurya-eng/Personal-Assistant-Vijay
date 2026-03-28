@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -23,27 +24,48 @@ class ConfigStore:
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def load_settings(self) -> dict[str, Any]:
-        return self._read_json(
-            "settings.json",
-            {
-                "app_name": "Vijay",
-                "host": "127.0.0.1",
-                "port": 8000,
-                "dry_run": True,
-                "allowed_origins": [
-                    "http://127.0.0.1:8000",
-                    "http://localhost:8000",
-                ],
-                "allowed_app_aliases": {
-                    "android studio": "C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe",
-                    "claude code": "claude",
-                    "vs code": "code",
-                    "chatgpt": "https://chatgpt.com",
-                    "youtube": "https://www.youtube.com",
-                },
-                "search_engine": "https://www.google.com/search?q={query}",
+        defaults = {
+            "app_name": "Vijay",
+            "admin_email": "harkarshaurya@gmail.com",
+            "host": "127.0.0.1",
+            "port": 8000,
+            "dry_run": True,
+            "google_sign_in_enabled": True,
+            "base_system_prompt": (
+                "You are Vijay, a secure local-first AI assistant. "
+                "Be helpful, calm, and operationally precise. "
+                "Never claim you completed an action unless the automation context says it happened. "
+                "Prefer safe automation, explain when device permission is missing, "
+                "and keep responses useful for non-technical users."
+            ),
+            "default_user_system_prompt": (
+                "Tailor your tone to the user, stay concise, and prioritize practical help."
+            ),
+            "allowed_origins": [
+                "http://127.0.0.1:8000",
+                "http://localhost:8000",
+            ],
+            "allowed_app_aliases": {
+                "android studio": "C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe",
+                "claude code": "claude",
+                "vs code": "code",
+                "chatgpt": "https://chatgpt.com",
+                "youtube": "https://www.youtube.com",
             },
-        )
+            "search_engine": "https://www.google.com/search?q={query}",
+        }
+        current = self._read_json("settings.json", defaults)
+        merged = {**defaults, **current}
+        merged["allowed_app_aliases"] = {
+            **defaults["allowed_app_aliases"],
+            **current.get("allowed_app_aliases", {}),
+        }
+        env_admin_email = os.getenv("ADMIN_EMAIL", "").strip().lower()
+        if env_admin_email:
+            merged["admin_email"] = env_admin_email
+        if merged != current:
+            self._write_json("settings.json", merged)
+        return merged
 
     def load_commands(self) -> dict[str, Any]:
         return self._read_json("commands.json", {"commands": []})
@@ -52,16 +74,17 @@ class ConfigStore:
         self._write_json("commands.json", payload)
 
     def load_voice(self) -> dict[str, Any]:
-        return self._read_json(
-            "voice.json",
-            {
-                "mode": "scaffold",
-                "lock_enabled": False,
-                "similarity_threshold": 0.8,
-                "authorized_profiles": {},
-            },
-        )
+        defaults = {
+            "mode": "scaffold",
+            "lock_enabled": False,
+            "similarity_threshold": 0.8,
+            "authorized_profiles": {},
+        }
+        current = self._read_json("voice.json", defaults)
+        merged = {**defaults, **current}
+        if merged != current:
+            self._write_json("voice.json", merged)
+        return merged
 
     def save_voice(self, payload: dict[str, Any]) -> None:
         self._write_json("voice.json", payload)
-

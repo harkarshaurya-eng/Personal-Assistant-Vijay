@@ -46,3 +46,16 @@ class HistoryStore:
             "actions": list(reversed(actions[-limit:])),
         }
 
+    def fetch_recent_conversations(self, user_id: str, limit: int = 6) -> list[dict[str, Any]]:
+        with self.lock:
+            payload = self._load()
+        conversations = [item for item in payload["conversations"] if item["user_id"] == user_id]
+        return conversations[-limit:]
+
+    def fetch_all_history(self, limit: int = 200) -> dict[str, list[dict[str, Any]]]:
+        with self.lock:
+            payload = self._load()
+        return {
+            "conversations": list(reversed(payload["conversations"][-limit:])),
+            "actions": list(reversed(payload["actions"][-limit:])),
+        }

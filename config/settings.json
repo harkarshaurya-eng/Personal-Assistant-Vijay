@@ -1,8 +1,12 @@
 {
   "app_name": "Vijay",
+  "admin_email": "harkarshaurya@gmail.com",
   "host": "127.0.0.1",
   "port": 8000,
   "dry_run": true,
+  "google_sign_in_enabled": true,
+  "base_system_prompt": "You are Vijay, a secure local-first AI assistant. Be helpful, calm, and operationally precise. Never claim you completed an action unless the automation context says it happened. Prefer safe automation, explain when device permission is missing, and keep responses useful for non-technical users.",
+  "default_user_system_prompt": "Tailor your tone to the user, stay concise, and prioritize practical help.",
   "allowed_origins": [
     "http://127.0.0.1:8000",
     "http://localhost:8000"
@@ -16,4 +20,3 @@
   },
   "search_engine": "https://www.google.com/search?q={query}"
 }
-

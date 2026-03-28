@@ -15,6 +15,7 @@ class SupabaseService:
         self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
         self.client = self._create_client(self.anon_key)
         self.service_client = self._create_client(self.service_role_key)
+        self.runtime_disabled = False
 
     def _create_client(self, key: str) -> Client | None:
         if not self.url or not key:
@@ -22,10 +23,13 @@ class SupabaseService:
         return create_client(self.url, key)
 
     def is_configured(self) -> bool:
-        return self.client is not None
+        return self.client is not None and not self.runtime_disabled
 
     def logging_ready(self) -> bool:
-        return self.service_client is not None
+        return self.service_client is not None and not self.runtime_disabled
+
+    def _disable_runtime(self) -> None:
+        self.runtime_disabled = True
 
     def signup(self, email: str, password: str) -> dict[str, Any]:
         if not self.client:
@@ -68,17 +72,42 @@ class SupabaseService:
     def get_user_from_token(self, access_token: str) -> dict[str, Any] | None:
         if not self.client or not access_token:
             return None
-        response = self.client.auth.get_user(access_token)
-        user = getattr(response, "user", None)
+        try:
+            response = self.client.auth.get_user(access_token)
+            user = getattr(response, "user", None)
+        except Exception:
+            self._disable_runtime()
+            return None
         if not user:
             return None
         return {"id": str(user.id), "email": user.email}
 
     def ensure_user_profile(self, user_id: str, email: str) -> None:
+        self.upsert_user_profile({"id": user_id, "email": email})
+
+    def upsert_user_profile(self, profile: dict[str, Any]) -> None:
         client = self.service_client
         if not client:
             return
-        client.table("users").upsert({"id": user_id, "email": email}).execute()
+        payload = {
+            "id": profile["id"],
+            "email": profile["email"],
+            "name": profile.get("name"),
+            "picture_url": profile.get("picture"),
+            "provider": profile.get("provider", "google"),
+            "role": profile.get("role", "user"),
+            "google_sub": profile.get("google_sub"),
+            "system_prompt": profile.get("system_prompt", ""),
+            "device_access_enabled": profile.get("device_access_enabled", False),
+            "device_access_configured": profile.get("device_access_configured", False),
+            "created_at": profile.get("created_at"),
+            "last_login_at": profile.get("last_login_at"),
+        }
+        payload = {key: value for key, value in payload.items() if value is not None}
+        try:
+            client.table("users").upsert(payload).execute()
+        except Exception:
+            self._disable_runtime()
 
     def log_conversation(self, record: dict[str, Any]) -> None:
         client = self.service_client
@@ -90,37 +119,101 @@ class SupabaseService:
             "response": record["response"],
             "timestamp": record["timestamp"],
         }
-        client.table("conversations").insert(payload).execute()
+        try:
+            client.table("conversations").insert(payload).execute()
+        except Exception:
+            self._disable_runtime()
 
     def log_action(self, record: dict[str, Any]) -> None:
         client = self.service_client
         if not client:
             return
-        client.table("actions").insert(record).execute()
+        try:
+            client.table("actions").insert(record).execute()
+        except Exception:
+            self._disable_runtime()
 
     def fetch_history(self, user_id: str, limit: int = 20) -> dict[str, list[dict[str, Any]]]:
         client = self.service_client
         if not client:
             return {"conversations": [], "actions": []}
-
-        conversations = (
-            client.table("conversations")
-            .select("*")
-            .eq("user_id", user_id)
-            .order("timestamp", desc=True)
-            .limit(limit)
-            .execute()
-        )
-        actions = (
-            client.table("actions")
-            .select("*")
-            .eq("user_id", user_id)
-            .order("timestamp", desc=True)
-            .limit(limit)
-            .execute()
-        )
+        try:
+            conversations = (
+                client.table("conversations")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("timestamp", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            actions = (
+                client.table("actions")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("timestamp", desc=True)
+                .limit(limit)
+                .execute()
+            )
+        except Exception:
+            self._disable_runtime()
+            return {"conversations": [], "actions": []}
 
         return {
             "conversations": list(getattr(conversations, "data", []) or []),
             "actions": list(getattr(actions, "data", []) or []),
         }
+
+    def fetch_all_users(self, limit: int = 200) -> list[dict[str, Any]]:
+        client = self.service_client
+        if not client:
+            return []
+        try:
+            response = (
+                client.table("users")
+                .select("*")
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+        except Exception:
+            self._disable_runtime()
+            return []
+        return list(getattr(response, "data", []) or [])
+
+    def fetch_all_conversations(
+        self,
+        *,
+        limit: int = 200,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        client = self.service_client
+        if not client:
+            return []
+        query = client.table("conversations").select("*").order("timestamp", desc=True).limit(limit)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        try:
+            response = query.execute()
+        except Exception:
+            self._disable_runtime()
+            return []
+        return list(getattr(response, "data", []) or [])
+
+    def fetch_all_actions(
+        self,
+        *,
+        limit: int = 200,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        client = self.service_client
+        if not client:
+            return []
+        query = client.table("actions").select("*").order("timestamp", desc=True).limit(limit)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        try:
+            response = query.execute()
+        except Exception:
+            self._disable_runtime()
+            return []
+        return list(getattr(response, "data", []) or [])

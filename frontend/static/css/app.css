@@ -134,6 +134,10 @@ button.ghost {
     flex: 1;
 }
 
+.is-hidden {
+    display: none;
+}
+
 .status-grid {
     display: grid;
     gap: 10px;
@@ -194,10 +198,105 @@ button.ghost {
     border-bottom: none;
 }
 
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.google-button {
+    margin: 12px 0 16px;
+}
+
+.user-card {
+    background: rgba(23, 49, 63, 0.06);
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.user-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.user-head p {
+    margin: 6px 0 0;
+    color: var(--muted);
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 78px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.role-badge.admin {
+    background: rgba(213, 107, 45, 0.18);
+    color: var(--accent);
+}
+
+.role-badge.user,
+.role-badge.guest {
+    background: rgba(23, 49, 63, 0.08);
+    color: var(--ink);
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    gap: 20px;
+}
+
+.admin-column {
+    min-width: 0;
+}
+
+.admin-user-item {
+    padding: 0;
+}
+
+.admin-user-item.selected {
+    background: rgba(213, 107, 45, 0.08);
+    border-radius: 12px;
+}
+
+.user-select-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    border: none;
+    padding: 0;
+}
+
+.user-select-btn strong,
+.user-select-btn span,
+.user-select-btn small {
+    display: block;
+}
+
+.user-select-btn span,
+.user-select-btn small {
+    color: var(--muted);
+    margin-top: 4px;
+}
+
 @media (max-width: 900px) {
     .hero,
-    .grid {
+    .grid,
+    .admin-grid {
         grid-template-columns: 1fr;
     }
 }
-

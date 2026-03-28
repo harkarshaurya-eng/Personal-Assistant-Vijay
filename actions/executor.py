@@ -14,10 +14,34 @@ class ActionExecutor:
         self.config_store = config_store
         self.logger = get_logger()
 
-    def execute_steps(self, steps: list[str], confirm: bool = False) -> dict[str, object]:
+    def can_handle_step(self, step: str) -> bool:
+        normalized = normalize_text(step)
+        return normalized.startswith("search web for ") or normalized.startswith("open ")
+
+    def execute_steps(
+        self,
+        steps: list[str],
+        confirm: bool = False,
+        device_access_enabled: bool = False,
+    ) -> dict[str, object]:
         settings = self.config_store.load_settings()
         actions: list[dict[str, object]] = []
         needs_confirmation = False
+
+        if not device_access_enabled:
+            blocked_actions = [
+                {
+                    "step": step,
+                    "status": "blocked",
+                    "reason": "Device access is disabled. The user must allow local automation during setup.",
+                }
+                for step in steps
+            ]
+            return {
+                "summary": "Device automation is disabled for this user.",
+                "actions": blocked_actions,
+                "needs_confirmation": False,
+            }
 
         for step in steps:
             normalized = normalize_text(step)
@@ -88,4 +112,3 @@ class ActionExecutor:
             return {"step": step, "status": "simulated", "target": command}
         subprocess.Popen(command, shell=True)
         return {"step": step, "status": "executed", "target": command}
-

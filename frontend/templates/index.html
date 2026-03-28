@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
     <link rel="stylesheet" href="/static/css/app.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <main class="shell">
@@ -12,7 +13,7 @@
             <div>
                 <p class="eyebrow">Public AI Assistant Platform</p>
                 <h1>{{ app_name }}</h1>
-                <p class="lede">Local-first assistant with auth, safe automation, command learning, and Supabase-ready history logging.</p>
+                <p class="lede">Google sign-in, Groq-powered chat, local-safe automation, and an admin dashboard for every Vijay user.</p>
             </div>
             <div class="status-card">
                 <h2>System Status</h2>
@@ -22,34 +23,51 @@
 
         <section class="grid">
             <div class="panel">
-                <h2>Authentication</h2>
-                <label>Email</label>
-                <input id="email" type="email" placeholder="you@example.com">
-                <label>Password</label>
-                <input id="password" type="password" placeholder="At least 8 characters">
+                <h2>Sign In</h2>
+                <p class="hint">Use Google to start quickly. If you sign in with <strong>harkarshaurya@gmail.com</strong>, Vijay will open the admin dashboard automatically.</p>
+                <div id="googleButton" class="google-button"></div>
+                <div id="sessionCard" class="user-card is-hidden"></div>
                 <div class="button-row">
-                    <button id="signupBtn">Sign Up</button>
-                    <button id="loginBtn" class="secondary">Login</button>
-                    <button id="logoutBtn" class="ghost">Logout</button>
+                    <button id="logoutBtn" class="ghost">Sign Out</button>
                 </div>
                 <p id="authMessage" class="message"></p>
             </div>
 
-            <div class="panel">
-                <h2>Voice Training</h2>
-                <label>Sample Reference</label>
-                <input id="voiceSample" type="text" placeholder="example: desktop-mic-sample-1">
-                <button id="trainVoiceBtn">Train Voice</button>
-                <p class="hint">Starter scaffold mode stores a local profile placeholder so the end-to-end UX is ready for the real voice pipeline.</p>
-                <p id="voiceMessage" class="message"></p>
+            <div id="onboardingPanel" class="panel is-hidden">
+                <h2>Device Permission</h2>
+                <p class="hint">During setup, each user must decide whether Vijay can open apps, browse, and perform local tasks on this device like a Jarvis-style assistant.</p>
+                <div class="button-row">
+                    <button id="allowDeviceBtn">Allow Device Access</button>
+                    <button id="denyDeviceBtn" class="secondary">Keep It Disabled</button>
+                </div>
+                <p id="onboardingMessage" class="message"></p>
             </div>
         </section>
 
         <section class="grid">
             <div class="panel">
+                <h2>Your Vijay Prompt</h2>
+                <label>Custom System Prompt</label>
+                <textarea id="promptInput" rows="6" placeholder="Tell Vijay how you want your assistant to behave."></textarea>
+                <button id="savePromptBtn">Save My Prompt</button>
+                <p id="promptMessage" class="message"></p>
+            </div>
+
+            <div class="panel">
+                <h2>Voice Training</h2>
+                <label>Sample Reference</label>
+                <input id="voiceSample" type="text" placeholder="example: admin-desktop-mic-1">
+                <button id="trainVoiceBtn">Train Voice</button>
+                <p class="hint">Voice lock still uses the scaffold flow in this build, but the auth and admin layers are now ready for the real audio pipeline.</p>
+                <p id="voiceMessage" class="message"></p>
+            </div>
+        </section>
+
+        <section id="assistant" class="grid">
+            <div class="panel">
                 <h2>Chat</h2>
                 <div id="chatLog" class="chat-log"></div>
-                <textarea id="chatInput" rows="4" placeholder="Try: When I say open my setup - open Android Studio, Claude Code, YouTube and ChatGPT"></textarea>
+                <textarea id="chatInput" rows="4" placeholder="Ask Vijay anything, or say: When I say open my setup - open Android Studio, Claude Code, YouTube and ChatGPT"></textarea>
                 <div class="button-row">
                     <button id="sendBtn">Send</button>
                     <button id="confirmBtn" class="secondary">Send With Confirmation</button>
@@ -80,8 +98,41 @@
                 <ul id="actionHistory" class="history-list"></ul>
             </div>
         </section>
+
+        <section id="admin" class="panel is-hidden">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">Admin Dashboard</p>
+                    <h2>Supreme Control</h2>
+                </div>
+                <p id="adminOverviewNote" class="message"></p>
+            </div>
+            <div class="admin-grid">
+                <div class="admin-column">
+                    <h3>All Users</h3>
+                    <ul id="adminUsersList" class="history-list"></ul>
+                </div>
+                <div class="admin-column">
+                    <h3 id="adminUserTitle">Select a user</h3>
+                    <label>User System Prompt</label>
+                    <textarea id="adminPromptInput" rows="8" placeholder="Select a user to edit their Vijay prompt."></textarea>
+                    <div class="button-row">
+                        <button id="saveAdminPromptBtn">Save User Prompt</button>
+                        <button id="enableAdminDeviceBtn" class="secondary">Enable Device Access</button>
+                        <button id="disableAdminDeviceBtn" class="ghost">Disable Device Access</button>
+                    </div>
+                    <div class="history-box">
+                        <h3>User Conversations</h3>
+                        <ul id="adminConversationHistory" class="history-list"></ul>
+                    </div>
+                    <div class="history-box">
+                        <h3>User Actions</h3>
+                        <ul id="adminActionHistory" class="history-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
     <script src="/static/js/app.js"></script>
 </body>
 </html>
-
