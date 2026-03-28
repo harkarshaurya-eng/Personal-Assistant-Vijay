@@ -51,10 +51,11 @@ class AssistantService:
         action_summary: str | None = None
 
         if normalized == "train voice":
-            result = self.voice_service.train_voice(user_id, "manual-ui-trigger")
-            reply = result["message"]
-            actions = [result]
-            self.log_action(user_id, "voice_training", result)
+            reply = (
+                "Open the Voice Training panel in Vijay, click Start Enrollment, speak for a few seconds, "
+                "then click Stop Enrollment. Vijay now uses real microphone audio instead of the old scaffold flow."
+            )
+            actions = [{"type": "voice_training_instruction"}]
         elif normalized.startswith("when i say "):
             learned = self.command_service.learn_from_text(message)
             reply = f'Saved command "{learned["trigger"]}".'

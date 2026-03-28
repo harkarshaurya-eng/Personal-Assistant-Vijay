@@ -22,6 +22,7 @@ from backend.models import (
     GoogleAuthRequest,
     LearnCommandRequest,
     PromptUpdateRequest,
+    VoiceSettingsRequest,
     VoiceTrainRequest,
     VoiceVerifyRequest,
 )
@@ -32,7 +33,7 @@ from core.config_store import ConfigStore
 from core.history import HistoryStore
 from core.user_store import UserStore
 from utils.logger import get_logger
-from voice.service import VoiceService
+from voice.service import VoiceDependencyError, VoiceService, VoiceValidationError
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -44,7 +45,7 @@ def create_app() -> FastAPI:
     user_store = UserStore(BASE_DIR / "data", config_store)
     supabase = SupabaseService()
     groq_service = GroqService()
-    voice_service = VoiceService(config_store)
+    voice_service = VoiceService(config_store, BASE_DIR)
     action_executor = ActionExecutor(config_store)
     command_service = CommandLearningService(config_store)
     assistant = AssistantService(
@@ -132,6 +133,25 @@ def create_app() -> FastAPI:
             "device_access_configured": user.get("device_access_configured", False),
         }
 
+    async def read_audio_bytes(request: Request) -> bytes:
+        content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type not in {"audio/wav", "audio/x-wav", "audio/wave", "application/octet-stream"}:
+            raise HTTPException(
+                status_code=415,
+                detail="Vijay expects WAV audio from the browser recorder for voice lock.",
+            )
+        audio_bytes = await request.body()
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="No audio was uploaded.")
+        return audio_bytes
+
+    def voice_http_error(exc: Exception) -> HTTPException:
+        if isinstance(exc, VoiceDependencyError):
+            return HTTPException(status_code=503, detail=str(exc))
+        if isinstance(exc, VoiceValidationError):
+            return HTTPException(status_code=400, detail=str(exc))
+        return HTTPException(status_code=500, detail="Voice processing failed.")
+
     def verify_google_credential(credential: str) -> dict[str, Any]:
         if not google_client_id:
             raise HTTPException(
@@ -180,7 +200,7 @@ def create_app() -> FastAPI:
             "groq_ready": groq_service.is_configured(),
             "supabase_ready": supabase.is_configured(),
             "logging_ready": supabase.logging_ready(),
-            "voice": voice_service.status(),
+            "voice": voice_service.status(user["id"] if user.get("authenticated") else None),
             "user": build_user_payload(user) if user.get("authenticated") else None,
         }
 
@@ -265,10 +285,29 @@ def create_app() -> FastAPI:
     ) -> dict[str, Any]:
         user = require_user(authorization)
         result = voice_service.train_voice(user["id"], payload.sample_reference)
+        assistant.log_action(user_id=user["id"], action_type="voice_training_requested", details=result)
+        return {"message": result["message"], "data": result}
+
+    @app.post("/api/voice/train/audio")
+    async def train_voice_audio(
+        request: Request,
+        authorization: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        user = require_user(authorization)
+        audio_bytes = await read_audio_bytes(request)
+        try:
+            result = voice_service.train_voice_from_audio(user["id"], audio_bytes)
+        except Exception as exc:
+            raise voice_http_error(exc) from exc
         assistant.log_action(
             user_id=user["id"],
             action_type="voice_training",
-            details=result,
+            details={
+                "duration_seconds": result["duration_seconds"],
+                "transcript": result["transcript"],
+                "language": result["language"],
+                "similarity_threshold": result["similarity_threshold"],
+            },
         )
         return {"message": result["message"], "data": result}
 
@@ -281,10 +320,105 @@ def create_app() -> FastAPI:
         result = voice_service.verify_voice(user["id"], payload.sample_reference)
         assistant.log_action(
             user_id=user["id"],
-            action_type="voice_verification",
+            action_type="voice_verification_requested",
             details=result,
         )
         return {"message": result["message"], "data": result}
+
+    @app.post("/api/voice/verify/audio")
+    async def verify_voice_audio(
+        request: Request,
+        authorization: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        user = require_user(authorization)
+        audio_bytes = await read_audio_bytes(request)
+        try:
+            result = voice_service.verify_voice_from_audio(user["id"], audio_bytes)
+        except Exception as exc:
+            raise voice_http_error(exc) from exc
+        assistant.log_action(
+            user_id=user["id"],
+            action_type="voice_verification",
+            details={
+                "authorized": result["authorized"],
+                "similarity": result["similarity"],
+                "threshold": result["threshold"],
+            },
+        )
+        return {"message": result["message"], "data": result}
+
+    @app.post("/api/voice/settings")
+    async def update_voice_settings(
+        payload: VoiceSettingsRequest,
+        authorization: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        user = require_user(authorization)
+        result = voice_service.update_similarity_threshold(payload.similarity_threshold)
+        assistant.log_action(
+            user_id=user["id"],
+            action_type="voice_settings_updated",
+            details={"similarity_threshold": result["similarity_threshold"]},
+        )
+        return {"message": result["message"], "data": result}
+
+    @app.post("/api/voice/command")
+    async def voice_command(
+        request: Request,
+        confirm: bool = False,
+        authorization: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        user = require_user(authorization)
+        audio_bytes = await read_audio_bytes(request)
+        try:
+            verification = voice_service.verify_voice_from_audio(
+                user["id"],
+                audio_bytes,
+                transcribe_on_success=True,
+            )
+        except Exception as exc:
+            raise voice_http_error(exc) from exc
+
+        assistant.log_action(
+            user_id=user["id"],
+            action_type="voice_verification",
+            details={
+                "authorized": verification["authorized"],
+                "similarity": verification["similarity"],
+                "threshold": verification["threshold"],
+            },
+        )
+
+        if not verification["authorized"]:
+            return {"message": verification["message"], "data": {"voice": verification}}
+
+        transcript = str(verification.get("transcript", "")).strip()
+        if not transcript:
+            return {
+                "message": "Authorized user verified, but Vijay could not detect a spoken command. Try again.",
+                "data": {"voice": verification},
+            }
+
+        assistant.log_action(
+            user_id=user["id"],
+            action_type="voice_command_received",
+            details={
+                "transcript": transcript,
+                "language": verification.get("language", ""),
+            },
+        )
+        response = assistant.handle_message(
+            user_profile=user,
+            message=transcript,
+            confirm=confirm,
+        )
+        return {
+            "message": response["response"],
+            "data": {
+                **response,
+                "transcript": transcript,
+                "voice": verification,
+            },
+        }
 
     @app.post("/api/me/system-prompt")
     async def update_my_prompt(

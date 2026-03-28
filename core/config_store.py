@@ -75,9 +75,11 @@ class ConfigStore:
 
     def load_voice(self) -> dict[str, Any]:
         defaults = {
-            "mode": "scaffold",
+            "mode": "browser_wav",
             "lock_enabled": False,
             "similarity_threshold": 0.8,
+            "min_training_seconds": 3.0,
+            "min_command_seconds": 1.5,
             "authorized_profiles": {},
         }
         current = self._read_json("voice.json", defaults)

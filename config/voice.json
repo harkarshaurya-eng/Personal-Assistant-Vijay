@@ -1,7 +1,8 @@
 {
-  "mode": "scaffold",
+  "mode": "browser_wav",
   "lock_enabled": false,
-  "similarity_threshold": 0.8,
+  "similarity_threshold": 0.82,
+  "min_training_seconds": 3.0,
+  "min_command_seconds": 1.5,
   "authorized_profiles": {}
 }
-

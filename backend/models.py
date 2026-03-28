@@ -31,6 +31,10 @@ class VoiceVerifyRequest(BaseModel):
     sample_reference: str | None = Field(default=None, max_length=500)
 
 
+class VoiceSettingsRequest(BaseModel):
+    similarity_threshold: float = Field(ge=0.5, le=0.99)
+
+
 class PromptUpdateRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=4000)
 

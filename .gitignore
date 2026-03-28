@@ -5,6 +5,8 @@ __pycache__/
 data/local_store.json
 data/user_store.json
 data/vijay.log
+data/models/
+data/voice/
 dist/
 build/
 *.spec

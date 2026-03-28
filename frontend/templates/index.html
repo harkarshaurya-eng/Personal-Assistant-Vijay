@@ -55,10 +55,18 @@
 
             <div class="panel">
                 <h2>Voice Training</h2>
-                <label>Sample Reference</label>
-                <input id="voiceSample" type="text" placeholder="example: admin-desktop-mic-1">
-                <button id="trainVoiceBtn">Train Voice</button>
-                <p class="hint">Voice lock still uses the scaffold flow in this build, but the auth and admin layers are now ready for the real audio pipeline.</p>
+                <label>Similarity Threshold</label>
+                <input id="voiceThreshold" type="number" min="0.50" max="0.99" step="0.01" value="0.80">
+                <div class="button-row">
+                    <button id="saveVoiceThresholdBtn" class="secondary">Save Threshold</button>
+                </div>
+                <label>Enrollment Recording</label>
+                <div class="button-row">
+                    <button id="startEnrollBtn">Start Enrollment</button>
+                    <button id="stopEnrollBtn" class="ghost">Stop Enrollment</button>
+                </div>
+                <p class="hint">Speak naturally for 4 to 8 seconds. The browser will ask for microphone permission the first time you record.</p>
+                <p id="voiceStatusNote" class="hint"></p>
                 <p id="voiceMessage" class="message"></p>
             </div>
         </section>
@@ -72,6 +80,13 @@
                     <button id="sendBtn">Send</button>
                     <button id="confirmBtn" class="secondary">Send With Confirmation</button>
                 </div>
+                <label>Secure Voice Command</label>
+                <div class="button-row">
+                    <button id="startVoiceCommandBtn">Start Voice Command</button>
+                    <button id="stopVoiceCommandBtn" class="ghost">Stop Voice Command</button>
+                </div>
+                <p class="hint">Vijay verifies your enrolled voice before it transcribes and runs any spoken command.</p>
+                <p id="voiceCommandMessage" class="message"></p>
             </div>
 
             <div class="panel">

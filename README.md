@@ -7,6 +7,7 @@ Vijay is a local-first AI assistant platform with:
 - Per-user customizable system prompts
 - Admin dashboard access for `harkarshaurya@gmail.com`
 - Local device-permission onboarding before automation
+- Real browser-microphone voice enrollment and speaker verification
 - Safe command learning, conversation history, and action logging
 
 The current build serves a lightweight web UI from the Python backend, stores runtime state locally, and syncs users, conversations, and actions to Supabase when backend credentials are configured.
@@ -20,6 +21,7 @@ The current build serves a lightweight web UI from the Python backend, stores ru
 - Added Groq integration for Vijay replies
 - Added setup-time device permission gating for local automation
 - Added auto-fallback to a free local port if `8000` is busy
+- Replaced the voice scaffold with real WAV recording, Faster-Whisper transcription, and SpeechBrain speaker verification
 
 ## Project Structure
 
@@ -45,7 +47,8 @@ ai-vijay/
 
 1. Double-click `install.bat`
 2. Wait for the environment and dependencies to install
-3. Open the URL shown in the terminal
+3. The voice dependencies are larger and may take a few extra minutes on the first install
+4. Open the URL shown in the terminal
 
 ### Manual start
 
@@ -56,6 +59,12 @@ pip install -r requirements.txt
 copy .env.example .env
 python main.py
 ```
+
+Voice compatibility:
+
+- the local voice stack is currently validated for Python `3.11` and `3.12`
+- `install.bat` now prefers those versions automatically when they are available through the Windows `py` launcher
+- if you already created `.venv` with Python `3.14`, delete `.venv` and run `install.bat` again before testing voice lock
 
 ## Environment Variables
 
@@ -69,6 +78,9 @@ GOOGLE_CLIENT_ID=your-google-web-client-id
 GROQ_API_KEY=your-groq-api-key
 GROQ_MODEL=llama-3.3-70b-versatile
 ADMIN_EMAIL=harkarshaurya@gmail.com
+VOICE_STT_MODEL=base.en
+VOICE_STT_COMPUTE_TYPE=int8
+VOICE_SPEAKER_MODEL=speechbrain/spkrec-ecapa-voxceleb
 ```
 
 Notes:
@@ -77,6 +89,7 @@ Notes:
 - `GROQ_API_KEY` is required for Vijay’s AI chat replies.
 - `SUPABASE_SERVICE_ROLE_KEY` is used server-side only for backend logging and admin reads.
 - `ADMIN_EMAIL` defaults to `harkarshaurya@gmail.com`.
+- `VOICE_STT_MODEL`, `VOICE_STT_COMPUTE_TYPE`, and `VOICE_SPEAKER_MODEL` are optional voice-tuning overrides.
 
 ## Google Sign-In Setup
 
@@ -136,8 +149,9 @@ If Supabase is unreachable, Vijay falls back to local mode without crashing.
 2. Sign in with Google.
 3. If you are a normal user:
    - choose whether Vijay may control the local device
+   - record one enrollment sample in the Voice Training panel
    - customize your personal Vijay prompt if you want
-   - chat and teach commands
+   - chat, speak secure voice commands, and teach commands
 4. If you sign in as `harkarshaurya@gmail.com`:
    - Vijay opens the admin dashboard
    - you can inspect every user
@@ -151,16 +165,53 @@ Before Vijay performs local automation, the user must explicitly allow device ac
 If device access is disabled:
 
 - Vijay will still chat
+- Vijay will still verify the user’s voice and transcribe what they said
 - Vijay will still save prompts and commands
 - Vijay will block local automation with a clear message
 
-## Voice Training
+Browser note:
 
-The current build still uses the voice-training scaffold in [`voice/service.py`](/C:/Users/Admin/Desktop/Vijay/voice/service.py). It stores a local placeholder profile so the auth/admin layers are ready for the real microphone-based voice lock phase.
+- the first time a user records audio, the browser will separately ask for microphone permission
 
-Current config file:
+## Voice Training And Voice Lock
 
-- [`config/voice.json`](/C:/Users/Admin/Desktop/Vijay/config/voice.json)
+Vijay now uses real microphone audio from the browser UI.
+
+How enrollment works:
+
+1. Sign in with Google.
+2. In the Voice Training panel, keep the default threshold or adjust it.
+3. Click `Start Enrollment`.
+4. Allow microphone access in the browser if prompted.
+5. Speak naturally for 4 to 8 seconds.
+6. Click `Stop Enrollment`.
+7. Vijay stores a local speaker embedding and enables voice lock.
+
+How secure voice commands work:
+
+1. Click `Start Voice Command`.
+2. Speak your command.
+3. Click `Stop Voice Command`.
+4. Vijay compares the new speaker embedding to the enrolled profile.
+5. If the similarity score is below the threshold, Vijay returns:
+
+```text
+Unauthorized user detected. Access denied.
+```
+
+6. If the voice is authorized, Vijay transcribes the command with Faster-Whisper and runs it through the normal assistant pipeline.
+
+What is stored locally:
+
+- speaker embeddings and thresholds in [`config/voice.json`](/C:/Users/Admin/Desktop/Vijay/config/voice.json)
+- recorded WAV samples in `data/voice/`
+- downloaded voice models in `data/models/`
+
+Important:
+
+- the first enrollment or command run may take longer because the local Whisper and SpeechBrain models are downloaded
+- voice automation still respects the same per-user device-permission gate used by text commands
+- for local voice lock, use a Vijay virtualenv created with Python `3.11` or `3.12`
 
 ## Command Learning
 
@@ -222,7 +273,8 @@ Recommended next phase:
 3. Add Google, Groq, and Supabase keys to `.env`
 4. Sign in with Google
 5. Choose local device permission
-6. Start using Vijay
+6. Record a voice enrollment sample
+7. Start using Vijay
 
 ### Shared deployment
 
@@ -298,5 +350,41 @@ python main.py
 2. Configure `.env`
 3. Sign in with Google
 4. Choose device permission
-5. Use Vijay
+5. Train voice lock
+6. Use Vijay
 
+## Real Voice Lock And Jarvis Permission Steps
+
+If you want to understand or extend the implementation, follow this order:
+
+1. Browser microphone capture
+   - Vijay records raw audio in the web UI with `getUserMedia` and Web Audio
+   - the UI encodes the captured PCM stream into a WAV blob before upload
+
+2. Enrollment endpoint
+   - the browser posts the WAV file to `/api/voice/train/audio`
+   - [`voice/service.py`](/C:/Users/Admin/Desktop/Vijay/voice/service.py) normalizes the audio to mono 16 kHz
+   - SpeechBrain creates the speaker embedding
+   - Faster-Whisper transcribes the sample for operator feedback
+   - Vijay stores the embedding locally in [`config/voice.json`](/C:/Users/Admin/Desktop/Vijay/config/voice.json)
+
+3. Verification endpoint
+   - the browser posts command audio to `/api/voice/command`
+   - Vijay computes a new speaker embedding
+   - cosine similarity is compared against the configured threshold
+   - unauthorized speakers are blocked before transcription and automation
+
+4. Voice command execution
+   - authorized audio is transcribed with Faster-Whisper
+   - the transcript is passed into the same assistant path as text chat
+   - command learning, history, Groq replies, and admin visibility all stay unified
+
+5. Jarvis-style device permission
+   - every user must opt into local device control during onboarding
+   - if that permission is off, Vijay can still chat and transcribe but it will refuse local automation
+   - this enforcement happens in [`actions/executor.py`](/C:/Users/Admin/Desktop/Vijay/actions/executor.py)
+
+6. Local storage and safety
+   - embeddings and thresholds live in local config
+   - raw WAV samples stay on the machine in `data/voice/`
+   - risky commands still require confirmation before execution
