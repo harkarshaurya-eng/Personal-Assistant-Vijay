@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -32,6 +31,7 @@ from core.command_learning import CommandLearningService
 from core.config_store import ConfigStore
 from core.history import HistoryStore
 from core.user_store import UserStore
+from utils.env_loader import load_project_env
 from utils.logger import get_logger
 from voice.service import VoiceDependencyError, VoiceService, VoiceValidationError
 
@@ -39,7 +39,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def create_app() -> FastAPI:
-    load_dotenv()
+    load_project_env()
     config_store = ConfigStore(BASE_DIR)
     history_store = HistoryStore(BASE_DIR / "data")
     user_store = UserStore(BASE_DIR / "data", config_store)

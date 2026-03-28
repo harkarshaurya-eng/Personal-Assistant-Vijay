@@ -4,12 +4,13 @@ import os
 from typing import Any
 
 import httpx
-from dotenv import load_dotenv
+
+from utils.env_loader import load_project_env
 
 
 class GroqService:
     def __init__(self) -> None:
-        load_dotenv()
+        load_project_env()
         self.api_key = os.getenv("GROQ_API_KEY", "").strip()
         self.model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
         self.endpoint = "https://api.groq.com/openai/v1/chat/completions"

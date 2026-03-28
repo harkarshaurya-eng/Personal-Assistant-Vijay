@@ -213,6 +213,7 @@ button.ghost {
 
 .google-button {
     margin: 12px 0 16px;
+    min-height: 44px;
 }
 
 .user-card {

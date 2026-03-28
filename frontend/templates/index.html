@@ -23,11 +23,12 @@
 
         <section class="grid">
             <div class="panel">
-                <h2>Sign In</h2>
-                <p class="hint">Use Google to start quickly. If you sign in with <strong>harkarshaurya@gmail.com</strong>, Vijay will open the admin dashboard automatically.</p>
+                <h2>Continue With Google</h2>
+                <p class="hint">Google is the only sign-in step. Groq powers chat later, and Supabase is only for sync and logs. If you sign in with <strong>harkarshaurya@gmail.com</strong>, Vijay opens the admin dashboard automatically.</p>
                 <div id="googleButton" class="google-button"></div>
+                <p id="googleReadyNote" class="hint"></p>
                 <div id="sessionCard" class="user-card is-hidden"></div>
-                <div class="button-row">
+                <div id="logoutRow" class="button-row is-hidden">
                     <button id="logoutBtn" class="ghost">Sign Out</button>
                 </div>
                 <p id="authMessage" class="message"></p>

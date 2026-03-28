@@ -20,7 +20,9 @@ const state = {
 
 const statusGrid = document.getElementById("statusGrid");
 const authMessage = document.getElementById("authMessage");
+const googleReadyNote = document.getElementById("googleReadyNote");
 const sessionCard = document.getElementById("sessionCard");
+const logoutRow = document.getElementById("logoutRow");
 const onboardingPanel = document.getElementById("onboardingPanel");
 const onboardingMessage = document.getElementById("onboardingMessage");
 const promptInput = document.getElementById("promptInput");
@@ -109,10 +111,10 @@ function renderStatus() {
         : `${state.status.voice.profile_count} profile(s)`;
 
     const items = [
-        ["Google", state.status.google_ready ? "Ready" : "Missing client ID"],
-        ["Groq", state.status.groq_ready ? "Ready" : "Missing API key"],
-        ["Supabase", state.status.supabase_ready ? "Ready" : "Not configured"],
-        ["Cloud logging", state.status.logging_ready ? "Ready" : "Local only"],
+        ["Google sign-in", state.status.google_ready ? "Ready" : "Needs client ID"],
+        ["Groq chat", state.status.groq_ready ? "Ready" : "Optional"],
+        ["Supabase sync", state.status.supabase_ready ? "Ready" : "Optional"],
+        ["Cloud logging", state.status.logging_ready ? "Ready" : "Optional"],
         ["Dry run", state.status.dry_run ? "Enabled" : "Disabled"],
         ["Voice models", voiceModelsValue],
         ["Voice lock", state.status.voice.lock_enabled ? "Enabled" : "Disabled"],
@@ -128,16 +130,19 @@ function renderStatus() {
     });
 
     renderVoiceStatus();
+    renderGoogleStatus();
 }
 
 function renderSession() {
     if (!state.me) {
         sessionCard.innerHTML = "";
         show(sessionCard, false);
+        show(logoutRow, false);
         show(onboardingPanel, false);
         show(adminSection, false);
         promptInput.value = "";
         renderVoiceStatus();
+        renderGoogleStatus();
         return;
     }
 
@@ -156,9 +161,30 @@ function renderSession() {
     `;
     promptInput.value = state.me.system_prompt || "";
     show(sessionCard, true);
+    show(logoutRow, true);
     show(onboardingPanel, !state.me.device_access_configured);
     show(adminSection, state.me.role === "admin");
     renderVoiceStatus();
+    renderGoogleStatus();
+}
+
+function renderGoogleStatus() {
+    if (!state.publicConfig) {
+        return;
+    }
+    if (!state.publicConfig.google_enabled) {
+        setMessage(
+            googleReadyNote,
+            "Google sign-in is unavailable because GOOGLE_CLIENT_ID in the project .env file is blank."
+        );
+        return;
+    }
+    setMessage(
+        googleReadyNote,
+        state.me
+            ? "Signed in with Google. You can continue straight into Vijay."
+            : "One click is all you need here: continue with Google to enter Vijay."
+    );
 }
 
 function renderVoiceStatus() {
@@ -260,6 +286,7 @@ function renderAdminUserDetail(data) {
 async function loadPublicConfig() {
     const payload = await api("/api/public-config", { method: "GET" });
     state.publicConfig = payload;
+    renderGoogleStatus();
 }
 
 async function loadStatus() {
@@ -350,7 +377,7 @@ async function handleGoogleCredentialResponse(credential) {
 
 function initializeGoogleButton() {
     if (!state.publicConfig?.google_enabled) {
-        setMessage(authMessage, "Add GOOGLE_CLIENT_ID in .env to enable Google sign-in.");
+        setMessage(authMessage, "Add GOOGLE_CLIENT_ID to C:\\Users\\Admin\\Desktop\\Vijay\\.env, restart Vijay, then refresh this page.");
         return;
     }
     if (!window.google || !document.getElementById("googleButton")) {

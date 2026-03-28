@@ -3,13 +3,14 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from dotenv import load_dotenv
 from supabase import Client, create_client
+
+from utils.env_loader import load_project_env
 
 
 class SupabaseService:
     def __init__(self) -> None:
-        load_dotenv()
+        load_project_env()
         self.url = os.getenv("SUPABASE_URL", "").strip()
         self.anon_key = os.getenv("SUPABASE_ANON_KEY", "").strip()
         self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
